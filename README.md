@@ -1,5 +1,5 @@
-# pingback_implementation
-Testing a variation of pingback
+# Pingback Implementation
+Testing a variation of pingback base on the malware described by [TrustWave](https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/backdoor-at-the-end-of-the-icmp-tunnel/)/[SpiderLabs](https://github.com/SpiderLabs/pingback)
 
 pingback_server.py under is ran on the computer that is hosting whatever files you want to download.
 
@@ -14,5 +14,7 @@ Scapy
 
 # Bugs:
 For some reason, scapy bugs out on Windows, and does not sniff any packets unless given a specific interface - this problem does not exist on linux.
+
 Scapy will occasionally drop packets for some reason during large transfers that use multiple packets. There is a set delay in currently, but I plan on adding automatic re-transmission for the v2 client/server scripts.
+
 Not really a bug, per-se, but the client & server must be on the same subnet, or else the connection cannot be made.
