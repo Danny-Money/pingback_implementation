@@ -1,6 +1,5 @@
 from scapy.all import *
 from time import sleep
-import binascii
 
 for i in range(0,1):
 

